@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface Aldeia {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  localizacao?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

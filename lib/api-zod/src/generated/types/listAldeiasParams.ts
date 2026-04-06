@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type ListAldeiasParams = {
+  /**
+   * Only return records updated after this timestamp (ISO 8601)
+   */
+  updatedAfter?: Date;
+};

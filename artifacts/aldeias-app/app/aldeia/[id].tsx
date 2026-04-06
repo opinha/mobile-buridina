@@ -4,8 +4,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
   FlatList,
+  Image,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,16 +29,17 @@ function MembroCard({ membro }: { membro: Membro }) {
       style={styles.membroCard}
       onPress={() => {
         Haptics.selectionAsync();
-        router.push({
-          pathname: "/membro/[id]",
-          params: { id: membro.id },
-        });
+        router.push({ pathname: "/membro/[id]", params: { id: membro.id } });
       }}
       activeOpacity={0.75}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
+      {membro.fotoUrl ? (
+        <Image source={{ uri: membro.fotoUrl }} style={styles.avatar} />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+      )}
       <View style={styles.membroInfo}>
         <Text style={styles.membroEtnico}>{membro.nomeEtnico}</Text>
         <Text style={styles.membroSocial}>{membro.nomeSocial}</Text>
@@ -56,10 +57,10 @@ export default function AldeiaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getAldeiaById, getMembrosByAldeia } = useApp();
   const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+
   const aldeia = getAldeiaById(id);
   const membros = getMembrosByAldeia(id);
-  const topPad =
-    Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   if (!aldeia) {
     return (
@@ -98,12 +99,25 @@ export default function AldeiaScreen() {
         <View style={styles.statItem}>
           <Feather name="users" size={16} color={colors.light.primary} />
           <Text style={styles.statValue}>{membros.length}</Text>
-          <Text style={styles.statLabel}>membros</Text>
+          <Text style={styles.statLabel}>
+            {membros.length === 1 ? "membro" : "membros"}
+          </Text>
         </View>
         {aldeia.localizacao ? (
           <View style={styles.statItem}>
             <Feather name="map-pin" size={16} color={colors.light.primary} />
             <Text style={styles.statValue}>{aldeia.localizacao}</Text>
+          </View>
+        ) : null}
+        {aldeia.descricao ? (
+          <View style={[styles.statItem, { flex: 1 }]}>
+            <Feather name="info" size={16} color={colors.light.primary} />
+            <Text
+              style={styles.statLabel}
+              numberOfLines={1}
+            >
+              {aldeia.descricao}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -115,39 +129,19 @@ export default function AldeiaScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListEmptyComponent={() => (
           <View style={styles.emptyState}>
-            <Feather name="users" size={48} color={colors.light.mutedForeground} />
+            <Feather
+              name="users"
+              size={48}
+              color={colors.light.mutedForeground}
+            />
             <Text style={styles.emptyText}>Nenhum membro nesta aldeia</Text>
+            <Text style={styles.emptySubtext}>
+              Os dados são sincronizados automaticamente do servidor
+            </Text>
           </View>
         )}
         renderItem={({ item }) => <MembroCard membro={item} />}
       />
-
-      <View
-        style={[
-          styles.footer,
-          {
-            paddingBottom:
-              Platform.OS === "web"
-                ? Math.max(insets.bottom, 34)
-                : insets.bottom + 16,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push({
-              pathname: "/cadastro-membro",
-              params: { aldeiaId: id },
-            });
-          }}
-          activeOpacity={0.85}
-        >
-          <Feather name="user-plus" size={20} color="#fff" />
-          <Text style={styles.addBtnText}>Cadastrar Membro</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -185,9 +179,10 @@ const styles = StyleSheet.create({
   },
   statsBar: {
     flexDirection: "row",
-    gap: 20,
+    flexWrap: "wrap",
+    gap: 16,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: colors.light.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.light.border,
@@ -256,32 +251,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 80,
     gap: 12,
+    paddingHorizontal: 32,
   },
   emptyText: {
     fontSize: 16,
     fontFamily: "Inter_500Medium",
     color: colors.light.mutedForeground,
+    textAlign: "center",
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: colors.light.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.light.border,
-  },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-  },
-  addBtnText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#fff",
+  emptySubtext: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: colors.light.mutedForeground,
+    textAlign: "center",
   },
   errorText: {
     fontSize: 16,

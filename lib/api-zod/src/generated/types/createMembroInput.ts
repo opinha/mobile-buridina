@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface CreateMembroInput {
+  aldeiaId: string;
+  nomeEtnico: string;
+  nomeSocial: string;
+  endereco?: string | null;
+  fotoUrl?: string | null;
 }

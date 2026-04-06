@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for Aldeias certification app
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: aldeias
+    description: Aldeias operations
+  - name: membros
+    description: Membros operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,141 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /aldeias:
+    get:
+      operationId: listAldeias
+      tags: [aldeias]
+      summary: List all aldeias
+      parameters:
+        - name: updatedAfter
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Only return records updated after this timestamp (ISO 8601)
+      responses:
+        "200":
+          description: List of aldeias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Aldeia"
+    post:
+      operationId: createAldeia
+      tags: [aldeias]
+      summary: Create a new aldeia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAldeiaInput"
+      responses:
+        "201":
+          description: Created aldeia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Aldeia"
+
+  /aldeias/{id}:
+    get:
+      operationId: getAldeia
+      tags: [aldeias]
+      summary: Get aldeia by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Aldeia found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Aldeia"
+        "404":
+          description: Aldeia not found
+
+  /membros:
+    get:
+      operationId: listMembros
+      tags: [membros]
+      summary: List all membros
+      parameters:
+        - name: aldeiaId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by aldeia ID
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search by name
+        - name: updatedAfter
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Only return records updated after this timestamp (ISO 8601)
+      responses:
+        "200":
+          description: List of membros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Membro"
+    post:
+      operationId: createMembro
+      tags: [membros]
+      summary: Create a new membro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMembroInput"
+      responses:
+        "201":
+          description: Created membro
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membro"
+
+  /membros/{id}:
+    get:
+      operationId: getMembro
+      tags: [membros]
+      summary: Get membro by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Membro found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membro"
+        "404":
+          description: Membro not found
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +173,92 @@ components:
       required:
         - status
 
+    Aldeia:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        localizacao:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - nome
+        - createdAt
+        - updatedAt
+
+    CreateAldeiaInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        localizacao:
+          type: string
+          nullable: true
+      required:
+        - nome
+
+    Membro:
+      type: object
+      properties:
+        id:
+          type: string
+        aldeiaId:
+          type: string
+        nomeEtnico:
+          type: string
+        nomeSocial:
+          type: string
+        endereco:
+          type: string
+          nullable: true
+        fotoUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - aldeiaId
+        - nomeEtnico
+        - nomeSocial
+        - createdAt
+        - updatedAt
+
+    CreateMembroInput:
+      type: object
+      properties:
+        aldeiaId:
+          type: string
+        nomeEtnico:
+          type: string
+        nomeSocial:
+          type: string
+        endereco:
+          type: string
+          nullable: true
+        fotoUrl:
+          type: string
+          nullable: true
+      required:
+        - aldeiaId
+        - nomeEtnico
+        - nomeSocial

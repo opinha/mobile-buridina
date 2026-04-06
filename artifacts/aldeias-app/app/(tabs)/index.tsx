@@ -3,12 +3,9 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   FlatList,
-  Modal,
   Platform,
-  Pressable,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -17,8 +14,46 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TribalPattern } from "@/components/TribalPattern";
-import { Aldeia, useApp } from "@/context/AppContext";
+import { Aldeia, Membro, useApp } from "@/context/AppContext";
 import colors from "@/constants/colors";
+
+function SyncBadge() {
+  const { syncStatus, lastSyncAt, isOnline, syncNow } = useApp();
+
+  let color = colors.light.mutedForeground;
+  let label = "";
+
+  if (!isOnline) {
+    color = "#E67E22";
+    label = "Offline";
+  } else if (syncStatus === "syncing") {
+    color = colors.light.primary;
+    label = "Sincronizando...";
+  } else if (syncStatus === "error") {
+    color = colors.light.destructive;
+    label = "Erro de sync";
+  } else if (lastSyncAt) {
+    color = colors.light.success;
+    const d = new Date(lastSyncAt);
+    label = `Sync ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+
+  return (
+    <TouchableOpacity
+      style={styles.syncBadge}
+      onPress={() => {
+        if (isOnline) syncNow();
+      }}
+    >
+      {syncStatus === "syncing" ? (
+        <ActivityIndicator size={10} color={color} />
+      ) : (
+        <View style={[styles.syncDot, { backgroundColor: color }]} />
+      )}
+      {label ? <Text style={[styles.syncLabel, { color }]}>{label}</Text> : null}
+    </TouchableOpacity>
+  );
+}
 
 function AldeiaCard({ aldeia }: { aldeia: Aldeia }) {
   const { getMembrosByAldeia } = useApp();
@@ -41,6 +76,7 @@ function AldeiaCard({ aldeia }: { aldeia: Aldeia }) {
           <Text style={styles.cardTitle}>{aldeia.nome}</Text>
           <Text style={styles.cardSubtitle}>
             {membros.length} {membros.length === 1 ? "membro" : "membros"}
+            {aldeia.localizacao ? ` · ${aldeia.localizacao}` : ""}
           </Text>
         </View>
       </View>
@@ -53,95 +89,56 @@ function AldeiaCard({ aldeia }: { aldeia: Aldeia }) {
   );
 }
 
-function AddAldeiaModal({
-  visible,
-  onClose,
-}: {
-  visible: boolean;
-  onClose: () => void;
-}) {
-  const { addAldeia } = useApp();
-  const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [localizacao, setLocalizacao] = useState("");
-  const insets = useSafeAreaInsets();
-
-  function handleSave() {
-    if (!nome.trim()) {
-      Alert.alert("Atenção", "O nome da aldeia é obrigatório.");
-      return;
-    }
-    addAldeia({ nome: nome.trim(), descricao, localizacao });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setNome("");
-    setDescricao("");
-    setLocalizacao("");
-    onClose();
-  }
+function MembroSearchCard({ membro }: { membro: Membro }) {
+  const { getAldeiaById } = useApp();
+  const aldeia = getAldeiaById(membro.aldeiaId);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => {
+        Haptics.selectionAsync();
+        router.push({ pathname: "/membro/[id]", params: { id: membro.id } });
+      }}
+      activeOpacity={0.75}
     >
-      <View style={[styles.modalContainer, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Nova Aldeia</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <Feather name="x" size={22} color={colors.light.foreground} />
-          </TouchableOpacity>
+      <View style={styles.cardLeft}>
+        <View style={styles.cardIconUser}>
+          <Text style={styles.avatarText}>
+            {membro.nomeEtnico.slice(0, 2).toUpperCase()}
+          </Text>
         </View>
-
-        <TribalPattern />
-
-        <View style={styles.modalBody}>
-          <Text style={styles.inputLabel}>Nome da Aldeia *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ex: Aldeia Guarani"
-            placeholderTextColor={colors.light.mutedForeground}
-            value={nome}
-            onChangeText={setNome}
-          />
-          <Text style={styles.inputLabel}>Descrição</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Descrição breve"
-            placeholderTextColor={colors.light.mutedForeground}
-            value={descricao}
-            onChangeText={setDescricao}
-          />
-          <Text style={styles.inputLabel}>Localização</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Região / Estado"
-            placeholderTextColor={colors.light.mutedForeground}
-            value={localizacao}
-            onChangeText={setLocalizacao}
-          />
-
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-            <Text style={styles.saveBtnText}>Cadastrar Aldeia</Text>
-          </TouchableOpacity>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardTitle}>{membro.nomeEtnico}</Text>
+          <Text style={styles.cardSubtitle}>
+            {membro.nomeSocial}
+            {aldeia ? ` · ${aldeia.nome}` : ""}
+          </Text>
         </View>
       </View>
-    </Modal>
+      <Feather
+        name="chevron-right"
+        size={20}
+        color={colors.light.mutedForeground}
+      />
+    </TouchableOpacity>
   );
 }
 
 export default function HomeScreen() {
-  const { aldeias } = useApp();
+  const { aldeias, searchMembros } = useApp();
   const insets = useSafeAreaInsets();
-  const [showModal, setShowModal] = useState(false);
-  const topPad =
-    Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchResults = searchQuery.trim().length > 0
+    ? searchMembros(searchQuery)
+    : [];
+
+  const isSearching = searchQuery.trim().length > 0;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -150,32 +147,82 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.headerTitle}>Aldeias</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/scanner")}
-            style={styles.bellBtn}
-          >
-            <Feather name="camera" size={22} color={colors.light.headerForeground} />
-          </TouchableOpacity>
+          <SyncBadge />
         </View>
         <TribalPattern height={6} backgroundColor={colors.light.primary} />
       </View>
 
-      <FlatList
-        data={aldeias}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyState}>
-            <Feather name="map" size={48} color={colors.light.mutedForeground} />
-            <Text style={styles.emptyText}>Nenhuma aldeia cadastrada</Text>
-            <Text style={styles.emptySubtext}>
-              Toque no botão abaixo para adicionar
-            </Text>
-          </View>
-        )}
-        renderItem={({ item }) => <AldeiaCard aldeia={item} />}
-      />
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Feather
+            name="search"
+            size={18}
+            color={colors.light.mutedForeground}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pesquisar membro por nome..."
+            placeholderTextColor={colors.light.mutedForeground}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && Platform.OS !== "ios" && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Feather
+                name="x"
+                size={16}
+                color={colors.light.mutedForeground}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {isSearching ? (
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Feather
+                name="user-x"
+                size={48}
+                color={colors.light.mutedForeground}
+              />
+              <Text style={styles.emptyText}>Nenhum membro encontrado</Text>
+              <Text style={styles.emptySubtext}>
+                Tente um nome diferente
+              </Text>
+            </View>
+          )}
+          renderItem={({ item }) => <MembroSearchCard membro={item} />}
+        />
+      ) : (
+        <FlatList
+          data={aldeias}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Feather
+                name="map"
+                size={48}
+                color={colors.light.mutedForeground}
+              />
+              <Text style={styles.emptyText}>Nenhuma aldeia cadastrada</Text>
+              <Text style={styles.emptySubtext}>
+                Os dados serão carregados do servidor automaticamente
+              </Text>
+            </View>
+          )}
+          renderItem={({ item }) => <AldeiaCard aldeia={item} />}
+        />
+      )}
 
       <View
         style={[
@@ -189,19 +236,17 @@ export default function HomeScreen() {
         ]}
       >
         <TouchableOpacity
-          style={styles.addBtn}
+          style={styles.qrBtn}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setShowModal(true);
+            router.push("/scanner");
           }}
           activeOpacity={0.85}
         >
-          <Feather name="plus" size={20} color="#fff" />
-          <Text style={styles.addBtnText}>Cadastrar Aldeia</Text>
+          <Feather name="maximize" size={20} color="#fff" />
+          <Text style={styles.qrBtnText}>Ler QR-Code</Text>
         </TouchableOpacity>
       </View>
-
-      <AddAldeiaModal visible={showModal} onClose={() => setShowModal(false)} />
     </View>
   );
 }
@@ -241,16 +286,49 @@ const styles = StyleSheet.create({
     color: colors.light.headerForeground,
     letterSpacing: 0.3,
   },
-  bellBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  syncBadge: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  syncLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.light.background,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.light.card,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: colors.light.foreground,
   },
   listContent: {
     padding: 16,
+    paddingTop: 4,
     flexGrow: 1,
   },
   card: {
@@ -270,6 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
+    flex: 1,
   },
   cardIcon: {
     width: 44,
@@ -279,7 +358,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  cardIconUser: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.light.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
   cardInfo: {
+    flex: 1,
     gap: 2,
   },
   cardTitle: {
@@ -292,25 +385,25 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: colors.light.mutedForeground,
   },
-  separator: {
-    height: 10,
-  },
   emptyState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 80,
     gap: 12,
+    paddingHorizontal: 32,
   },
   emptyText: {
     fontSize: 18,
     fontFamily: "Inter_600SemiBold",
     color: colors.light.mutedForeground,
+    textAlign: "center",
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: colors.light.mutedForeground,
+    textAlign: "center",
   },
   footer: {
     paddingHorizontal: 20,
@@ -319,75 +412,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.light.border,
   },
-  addBtn: {
+  qrBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-  },
-  addBtnText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#fff",
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.light.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    gap: 10,
     backgroundColor: colors.light.header,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  modalBody: {
-    padding: 20,
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: colors.light.mutedForeground,
-    marginBottom: 4,
-    marginTop: 8,
-  },
-  input: {
-    backgroundColor: colors.light.card,
-    borderWidth: 1,
-    borderColor: colors.light.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    color: colors.light.foreground,
-  },
-  saveBtn: {
-    backgroundColor: colors.light.primary,
     borderRadius: 14,
     paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 24,
   },
-  saveBtnText: {
+  qrBtnText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
     color: "#fff",
