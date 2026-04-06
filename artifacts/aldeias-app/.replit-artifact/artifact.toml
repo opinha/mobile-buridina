@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Aldeias App"
+version = "1.0.0"
+id = "artifacts/aldeias-app"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 23272
+
+[services.development]
+run = "pnpm --filter @workspace/aldeias-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/aldeias-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/aldeias-app", "run", "serve" ]
+
+[services.env]
+PORT = "23272"
+BASE_PATH = "/"

@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "INq21GZNjb1o-Z758ihZl"
+uri = "file://artifacts/aldeias-app/assets/images/icon.png"
+type = "image"
+title = "aldeias app icon"
