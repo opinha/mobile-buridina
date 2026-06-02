@@ -72,7 +72,7 @@ const STORAGE_KEYS = {
 };
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const DEFAULT_SERVER_URL = "http://localhost:3000";
+const DEFAULT_SERVER_URL = "http://192.168.1.1:3000"; // ALTERE PARA O SEU IP DO IPCONFIG
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [aldeias, setAldeias] = useState<Aldeia[]>([]);
