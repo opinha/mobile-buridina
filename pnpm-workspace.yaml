@@ -28,8 +28,10 @@ catalog:
   drizzle-orm: ^0.45.1
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
-  react: 19.1.0
-  react-dom: 19.1.0
+  # Must be this exact version because expo requires it
+  react: 19.2.3
+  # Must be this exact version because expo requires it
+  react-dom: 19.2.3
   tailwind-merge: ^3.3.1
   tailwindcss: ^4.1.14
   tsx: ^4.21.0
@@ -48,7 +50,9 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  react-native-renderer: "19.2.3"
 
 allowBuilds:
   esbuild: false
   msgpackr-extract: false
+

@@ -9,7 +9,6 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { AppState, AppStateStatus } from "react-native";
-import { setBaseUrl } from "@workspace/api-client-react";
 
 export interface Aldeia {
   id: string;
@@ -83,11 +82,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
   const [loaded, setLoaded] = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSyncing = useRef(false);
 
   // Navigation State
-  const [navHistory, setNavHistory] = useState<RouteState[]>([{ route: "Login" }]);
+  const [navHistory, setNavHistory] = useState<RouteState[]>([{ route: "Home" }]);
 
-  const currentRouteState = navHistory[navHistory.length - 1] || { route: "Login" };
+  const currentRouteState = navHistory[navHistory.length - 1] || { route: "Home" };
   const currentRoute = currentRouteState.route;
   const routeParams = currentRouteState.params;
 
@@ -119,7 +119,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const storedUrl = await AsyncStorage.getItem(STORAGE_KEYS.serverUrl);
         const url = storedUrl || DEFAULT_SERVER_URL;
         setServerUrl(url);
-        setBaseUrl(url);
 
         await loadLocal();
       } catch (err) {
@@ -133,27 +132,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Update server URL wrapper
   const updateServerUrl = useCallback((url: string) => {
-    const formatted = url.trim().replace(/\/+$/, "");
-    setServerUrl(formatted);
-    setBaseUrl(formatted);
-    AsyncStorage.setItem(STORAGE_KEYS.serverUrl, formatted);
+    try {
+      const formatted = url.trim().replace(/\/+$/, "");
+      setServerUrl(formatted);
+      AsyncStorage.setItem(STORAGE_KEYS.serverUrl, formatted).catch(() => {});
+    } catch (err) {
+      console.warn("Failed to update server URL:", err);
+    }
   }, []);
 
   // Monitor network state with NetInfo
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const online = !!state.isConnected && !!state.isInternetReachable !== false;
-      setIsOnline(online);
-    });
+    let unsubscribe: (() => void) | null = null;
+    try {
+      unsubscribe = NetInfo.addEventListener((state) => {
+        const online = !!(state.isConnected);
+        setIsOnline(online);
+      });
+    } catch (err) {
+      console.warn("NetInfo listener failed:", err);
+    }
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) {
+        try { unsubscribe(); } catch {}
+      }
+    };
   }, []);
 
   // Schedule periodic sync when online
   useEffect(() => {
     if (!loaded) return;
     if (isOnline) {
-      syncNow();
+      doSync();
       scheduleSync();
     } else {
       setSyncStatus("offline");
@@ -168,7 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active" && isOnline && loaded) {
-        syncNow();
+        doSync();
       }
     };
     const subscription = AppState.addEventListener("change", handleAppStateChange);
@@ -179,7 +190,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(() => {
       if (isOnline) {
-        syncNow();
+        doSync();
         scheduleSync();
       }
     }, SYNC_INTERVAL_MS);
@@ -191,54 +202,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const membroData = await AsyncStorage.getItem(STORAGE_KEYS.membros);
       const syncData = await AsyncStorage.getItem(STORAGE_KEYS.lastSyncAt);
 
-      let initialAldeias = aldeiaData ? JSON.parse(aldeiaData) : [];
-      let initialMembros = membroData ? JSON.parse(membroData) : [];
-
-      if (initialAldeias.length === 0) {
-        // Fallback mockup data if AsyncStorage is empty
-        initialAldeias = [
-          {
-            id: "aldeia-1",
-            nome: "Aldeia Buridiná",
-            localizacao: "Aruanã",
-            descricao: "Uma aldeia ancestral Karajá.",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: "aldeia-2",
-            nome: "Aldeia Inhumas",
-            localizacao: "Goiás",
-            descricao: "Instituto Federal de Goiás.",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-        initialMembros = [
-          {
-            id: "membro-1",
-            aldeiaId: "aldeia-1",
-            nomeEtnico: "Ixã",
-            nomeSocial: "Dante de Souza",
-            endereco: "Rua das Palmeiras, 123",
-            fotoUrl: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: "membro-2",
-            aldeiaId: "aldeia-2",
-            nomeEtnico: "Iberê",
-            nomeSocial: "Yendo Leonardo",
-            endereco: "Aldeia IFG",
-            fotoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-        await AsyncStorage.setItem(STORAGE_KEYS.aldeias, JSON.stringify(initialAldeias));
-        await AsyncStorage.setItem(STORAGE_KEYS.membros, JSON.stringify(initialMembros));
-      }
+      const initialAldeias = aldeiaData ? JSON.parse(aldeiaData) : [];
+      const initialMembros = membroData ? JSON.parse(membroData) : [];
 
       setAldeias(initialAldeias);
       setMembros(initialMembros);
@@ -249,7 +214,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Sinks offline registrations to server
-  const processPendingQueue = useCallback(async (currentServerUrl: string) => {
+  async function processPendingQueue(currentServerUrl: string) {
     try {
       const pendingData = await AsyncStorage.getItem(STORAGE_KEYS.pendingMembros);
       if (!pendingData) return;
@@ -258,6 +223,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (queue.length === 0) return;
 
       console.log(`Syncing ${queue.length} pending members offline registration...`);
+
+      const failedItems: any[] = [];
 
       for (const item of queue) {
         try {
@@ -275,23 +242,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               fotoUrl: item.fotoUrl,
             }),
           });
-          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          if (!res.ok) {
+            failedItems.push(item);
+          }
         } catch (postErr) {
-          console.warn("Failed to sync single pending member, keeping in queue:", postErr);
-          throw postErr; // Stop processing queue if server is failing
+          console.warn("Failed to sync single pending member:", postErr);
+          failedItems.push(item);
         }
       }
 
-      // Clear pending queue on successful upload
-      await AsyncStorage.setItem(STORAGE_KEYS.pendingMembros, JSON.stringify([]));
+      // Save only the failed items back to the queue
+      await AsyncStorage.setItem(STORAGE_KEYS.pendingMembros, JSON.stringify(failedItems));
     } catch (err) {
       console.warn("Offline sync queue process failed:", err);
-      throw err;
     }
-  }, []);
+  }
 
-  const syncNow = useCallback(async () => {
-    if (syncStatus === "syncing") return;
+  async function doSync() {
+    if (isSyncing.current) return;
+    isSyncing.current = true;
     setSyncStatus("syncing");
 
     try {
@@ -325,8 +294,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.warn("Sync failed, operating on cached offline data:", err);
       setSyncStatus(isOnline ? "error" : "offline");
+    } finally {
+      isSyncing.current = false;
     }
-  }, [syncStatus, isOnline, serverUrl, processPendingQueue]);
+  }
+
+  const syncNow = useCallback(async () => {
+    await doSync();
+  }, [serverUrl, isOnline]);
 
   const getMembrosByAldeia = useCallback((aldeiaId: string) => {
     return membros.filter((m) => m.aldeiaId === aldeiaId);
@@ -379,19 +354,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const savedMembro: Membro = await res.json();
 
         // Swap out the temporary ID with the server generated UUID
-        setMembros((prev) =>
-          prev.map((m) => (m.id === tempId ? savedMembro : m))
-        );
+        setMembros((prev) => {
+          const nextList = prev.map((m) => (m.id === tempId ? savedMembro : m));
+          AsyncStorage.setItem(STORAGE_KEYS.membros, JSON.stringify(nextList)).catch(() => {});
+          return nextList;
+        });
 
-        // Update local caches
-        const latestMembros = membros.map((m) => (m.id === tempId ? savedMembro : m));
-        if (!latestMembros.some((m) => m.id === savedMembro.id)) {
-          latestMembros.push(savedMembro);
-        }
-        await AsyncStorage.setItem(
-          STORAGE_KEYS.membros,
-          JSON.stringify(latestMembros.filter((m) => m.id !== tempId))
-        );
         setSyncStatus("idle");
       } catch (err) {
         console.warn("Failed to POST new member directly to server, falling back to offline queue:", err);
@@ -402,7 +370,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Offline queueing
       await queueOfflineMembro(membroData, novoMembro);
     }
-  }, [isOnline, serverUrl, membros]);
+  }, [isOnline, serverUrl]);
 
   async function queueOfflineMembro(
     membroData: Omit<Membro, "id" | "createdAt" | "updatedAt">,

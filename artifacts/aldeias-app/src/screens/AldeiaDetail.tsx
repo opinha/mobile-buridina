@@ -13,10 +13,8 @@ import { ChevronLeft, ChevronRight, Users, Search } from "lucide-react-native";
 import { useApp, type Membro } from "../context/AppContext";
 import { TribalBorder } from "../components/TribalBorder";
 
-const DEFAULT_FOTO = "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
-
 function MembroCard({ membro, onPress }: { membro: Membro; onPress: () => void }) {
-  const fotoSrc = membro.fotoUrl || DEFAULT_FOTO;
+  const hasFoto = membro.fotoUrl && membro.fotoUrl.length > 0;
 
   return (
     <TouchableOpacity
@@ -25,11 +23,19 @@ function MembroCard({ membro, onPress }: { membro: Membro; onPress: () => void }
       style={styles.membroCard}
     >
       <View style={styles.membroInfo}>
-        <Image
-          source={{ uri: fotoSrc }}
-          style={styles.avatar}
-          resizeMode="cover"
-        />
+        {hasFoto ? (
+          <Image
+            source={{ uri: membro.fotoUrl! }}
+            style={styles.avatar}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarPlaceholderText}>
+              {membro.nomeEtnico.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.nomeEtnico}>{membro.nomeEtnico}</Text>
           <Text style={styles.nomeSocial}>{membro.nomeSocial}</Text>
@@ -85,17 +91,6 @@ export default function AldeiaDetail() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Register New Member Button */}
-        <View style={styles.registerContainer}>
-          <TouchableOpacity
-            onPress={() => navigate("CadastroMembro", { id: aldeia.id })}
-            activeOpacity={0.8}
-            style={styles.registerButton}
-          >
-            <Text style={styles.registerButtonText}>✚ Cadastrar Novo Membro</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Section Title & Member Count */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Membros Registrados</Text>
@@ -193,30 +188,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 24,
   },
-  registerContainer: {
-    marginBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E3D4C0",
-    paddingBottom: 20,
-  },
-  registerButton: {
-    width: "100%",
-    backgroundColor: "#E65C00",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#E65C00",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  registerButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -293,6 +264,16 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 2,
     borderColor: "rgba(212, 105, 30, 0.3)",
+  },
+  avatarPlaceholder: {
+    backgroundColor: "#4A2B18",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarPlaceholderText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   textContainer: {
     flex: 1,

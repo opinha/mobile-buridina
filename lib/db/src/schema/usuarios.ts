@@ -2,21 +2,22 @@ import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const aldeias = pgTable("aldeias", {
+export const usuarios = pgTable("usuarios", {
   id: uuid("id").primaryKey().defaultRandom(),
+  username: text("username").unique().notNull(),
+  password: text("password").notNull(),
+  role: text("role").$type<"master" | "admin" | "avaliador">().notNull(),
   nome: text("nome").notNull(),
-  descricao: text("descricao"),
-  localizacao: text("localizacao"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertAldeiaSchema = createInsertSchema(aldeias).omit({
+export const insertUsuarioSchema = createInsertSchema(usuarios).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
 // @ts-ignore
-export type InsertAldeia = z.infer<typeof insertAldeiaSchema>;
-export type Aldeia = typeof aldeias.$inferSelect;
+export type InsertUsuario = z.infer<typeof insertUsuarioSchema>;
+export type Usuario = typeof usuarios.$inferSelect;

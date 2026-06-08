@@ -1,6 +1,6 @@
 import { useRoute, Link } from "wouter";
 import { useApp } from "../context/AppContext";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Printer } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 function TribalBorder() {
@@ -36,14 +36,61 @@ export default function MembroDetail() {
 
   return (
     <div className="flex flex-col h-full bg-[#F4EFE6] overflow-y-auto px-5 py-8 items-center justify-start">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: portrait;
+            margin: 0 !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #FFFFFF !important;
+            overflow: hidden !important;
+          }
+          /* Hide all general webpage elements */
+          body * {
+            visibility: hidden;
+          }
+          /* Show print badge container only */
+          #badge-to-print, #badge-to-print * {
+            visibility: visible;
+          }
+          #badge-to-print {
+            position: relative !important;
+            margin: 40px auto !important;
+            top: 0 !important;
+            left: 0 !important;
+            transform: none !important;
+            width: 350px !important;
+            border: 2px solid #4A2B18 !important;
+            box-shadow: none !important;
+            background-color: #F4EFE6 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            border-radius: 24px !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}} />
       
       {/* Identity Card Container */}
-      <div className="w-full bg-[#F4EFE6] rounded-[1.5rem] shadow-[0_8px_30px_rgba(74,43,24,0.15)] overflow-hidden border border-[#E6DDCC] flex flex-col flex-none items-center mb-8">
+      <div 
+        id="badge-to-print"
+        className="w-full max-w-[380px] bg-[#F4EFE6] rounded-[1.5rem] shadow-[0_8px_30px_rgba(74,43,24,0.15)] overflow-hidden border border-[#E6DDCC] flex flex-col flex-none items-center mb-6"
+      >
         
         {/* Header Brown */}
         <div className="w-full bg-[#4A2B18] pt-6 pb-4 px-4 flex items-center justify-center relative flex-none">
           <Link href="/aldeias">
-            <a className="absolute left-4 top-1/2 -translate-y-1/2 text-white">
+            <a className="absolute left-4 top-1/2 -translate-y-1/2 text-white no-print">
               <ChevronLeft size={28} strokeWidth={2.5}/>
             </a>
           </Link>
@@ -95,6 +142,16 @@ export default function MembroDetail() {
         </div>
 
       </div>
+
+      {/* Export / Print Button */}
+      <button
+        onClick={() => window.print()}
+        className="no-print w-full max-w-[380px] h-[52px] shadow-md bg-[#D4691E] hover:bg-[#B35615] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-2 text-white font-bold text-[16px] outline-none mb-12"
+      >
+        <Printer size={20} strokeWidth={2.5} />
+        Exportar / Imprimir Crachá
+      </button>
+
     </div>
   );
 }

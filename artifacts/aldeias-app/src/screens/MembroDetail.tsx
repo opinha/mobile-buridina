@@ -6,15 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
-import QRCode from "react-native-qrcode-svg";
 import { useApp } from "../context/AppContext";
 import { TribalBorder } from "../components/TribalBorder";
 
-const DEFAULT_FOTO = "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
+// Safely import QRCode — can fail if react-native-svg is not properly linked
+let QRCode: any = null;
+try {
+  QRCode = require("react-native-qrcode-svg").default;
+} catch (err) {
+  console.warn("react-native-qrcode-svg not available:", err);
+}
 
 export default function MembroDetail() {
   const insets = useSafeAreaInsets();
@@ -35,7 +39,8 @@ export default function MembroDetail() {
     );
   }
 
-  const fotoSrc = membro.fotoUrl || DEFAULT_FOTO;
+  // Only use fotoUrl if it's a valid URL or base64, otherwise show placeholder
+  const hasFoto = membro.fotoUrl && membro.fotoUrl.length > 0;
 
   return (
     <View style={styles.container}>
@@ -58,11 +63,20 @@ export default function MembroDetail() {
         <View style={styles.cardContainer}>
           {/* Photo Section */}
           <View style={styles.photoWrapper}>
-            <Image
-              source={{ uri: fotoSrc }}
-              style={styles.photo}
-              resizeMode="cover"
-            />
+            {hasFoto ? (
+              <Image
+                source={{ uri: membro.fotoUrl! }}
+                style={styles.photo}
+                resizeMode="cover"
+                defaultSource={undefined}
+              />
+            ) : (
+              <View style={[styles.photo, styles.photoPlaceholder]}>
+                <Text style={styles.photoPlaceholderText}>
+                  {membro.nomeEtnico.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
             {/* Banner Name */}
             <View style={styles.nameBanner}>
               <Text style={styles.nameText} numberOfLines={1}>
@@ -98,12 +112,19 @@ export default function MembroDetail() {
           {/* QR Code Section */}
           <View style={styles.qrContainer}>
             <View style={styles.qrWrapper}>
-              <QRCode
-                value={`membro:${membro.id}`}
-                size={140}
-                color="#2C1810"
-                backgroundColor="#FFF"
-              />
+              {QRCode ? (
+                <QRCode
+                  value={`membro:${membro.id}`}
+                  size={140}
+                  color="#2C1810"
+                  backgroundColor="#FFF"
+                />
+              ) : (
+                <View style={styles.qrFallback}>
+                  <Text style={styles.qrFallbackText}>QR Code</Text>
+                  <Text style={styles.qrFallbackId}>{membro.id}</Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -191,6 +212,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(74, 43, 24, 0.1)",
   },
+  photoPlaceholder: {
+    backgroundColor: "#4A2B18",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  photoPlaceholderText: {
+    fontSize: 72,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    opacity: 0.7,
+  },
   nameBanner: {
     width: "100%",
     backgroundColor: "#4A2B18",
@@ -258,5 +290,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+  },
+  qrFallback: {
+    width: 140,
+    height: 140,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F4EFE6",
+    borderRadius: 8,
+  },
+  qrFallbackText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#4A2B18",
+    marginBottom: 4,
+  },
+  qrFallbackId: {
+    fontSize: 10,
+    color: "#8B6347",
+    textAlign: "center",
   },
 });

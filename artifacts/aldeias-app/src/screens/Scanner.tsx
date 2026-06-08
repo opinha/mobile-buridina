@@ -5,51 +5,112 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CameraView, useCameraPermissions } from "expo-camera";
-import { ChevronLeft, Zap } from "lucide-react-native";
+import { ChevronLeft, Zap, Camera } from "lucide-react-native";
 import { useApp } from "../context/AppContext";
 import { TribalBorder } from "../components/TribalBorder";
 
-export default function Scanner() {
-  const insets = useSafeAreaInsets();
-  const { navigate, goBack } = useApp();
+// Safely import CameraView — this can fail if expo-camera native module is missing
+let CameraView: any = null;
+let useCameraPermissions: any = null;
+
+try {
+  const cameraModule = require("expo-camera");
+  CameraView = cameraModule.CameraView;
+  useCameraPermissions = cameraModule.useCameraPermissions;
+} catch (err) {
+  console.warn("expo-camera not available:", err);
+}
+
+function CameraScanner({ onScan }: { onScan: (data: string) => void }) {
+  if (!useCameraPermissions || !CameraView) {
+    return (
+      <View style={styles.permissionContainer}>
+        <Camera size={48} color="#8B6347" style={{ marginBottom: 16, opacity: 0.5 }} />
+        <Text style={styles.permissionText}>
+          Câmera não disponível neste dispositivo.
+        </Text>
+      </View>
+    );
+  }
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
-  // Reset scanned state when screen mounts or when resetting
   useEffect(() => {
     setScanned(false);
   }, []);
 
-  const handleScan = (v: string) => {
-    if (v.startsWith("aldeia:")) {
-      navigate("AldeiaDetail", { id: v.split(":")[1] });
-    } else if (v.startsWith("membro:")) {
-      navigate("MembroDetail", { id: v.split(":")[1] });
-    } else {
-      Alert.alert("QR Code Lido", v, [
-        { text: "OK", onPress: () => setScanned(false) },
-      ]);
-    }
-  };
-
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
-    handleScan(data);
+    onScan(data);
   };
 
   if (!permission) {
-    // Camera permissions are still loading
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={styles.text}>Carregando permissões...</Text>
+      <View style={[styles.permissionContainer]}>
+        <Text style={styles.permissionText}>Carregando permissões...</Text>
       </View>
     );
   }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>
+          Precisamos de permissão para acessar a câmera e escanear os cartões.
+        </Text>
+        <TouchableOpacity
+          onPress={requestPermission}
+          style={styles.permissionButton}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.permissionButtonText}>Permitir Câmera</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <CameraView
+        style={styles.camera}
+        facing="back"
+        onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+        barcodeScannerSettings={{
+          barcodeTypes: ["qr"],
+        }}
+      />
+      {/* Overlay Label */}
+      <View style={styles.overlayLabelContainer}>
+        <View style={styles.overlayLabel}>
+          <Text style={styles.overlayLabelText}>Aponte para o código</Text>
+        </View>
+      </View>
+    </>
+  );
+}
+
+export default function Scanner() {
+  const insets = useSafeAreaInsets();
+  const { navigate, goBack } = useApp();
+
+  const handleScan = (v: string) => {
+    try {
+      if (v.startsWith("aldeia:")) {
+        navigate("AldeiaDetail", { id: v.split(":")[1] });
+      } else if (v.startsWith("membro:")) {
+        navigate("MembroDetail", { id: v.split(":")[1] });
+      } else {
+        Alert.alert("QR Code Lido", v, [{ text: "OK" }]);
+      }
+    } catch (err) {
+      console.error("handleScan error:", err);
+      Alert.alert("Erro", "Falha ao processar QR Code.");
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -66,50 +127,7 @@ export default function Scanner() {
 
       {/* Camera Body */}
       <View style={styles.cameraContainer}>
-        {permission.granted ? (
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-            barcodeScannerSettings={{
-              barcodeTypes: ["qr"],
-            }}
-          />
-        ) : (
-          <View style={styles.permissionContainer}>
-            <Text style={styles.permissionText}>
-              Precisamos de permissão para acessar a câmera e escanear os cartões.
-            </Text>
-            <TouchableOpacity
-              onPress={requestPermission}
-              style={styles.permissionButton}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.permissionButtonText}>Permitir Câmera</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Overlay Label */}
-        {permission.granted && (
-          <View style={styles.overlayLabelContainer}>
-            <View style={styles.overlayLabel}>
-              <Text style={styles.overlayLabelText}>Aponte para o código</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Simulate scan button */}
-        <View style={styles.simulateContainer}>
-          <TouchableOpacity
-            onPress={() => handleScan("membro:membro-1")}
-            activeOpacity={0.8}
-            style={styles.simulateButton}
-          >
-            <Zap size={20} color="#FFF" />
-            <Text style={styles.simulateButtonText}>Simular Leitura</Text>
-          </TouchableOpacity>
-        </View>
+        <CameraScanner onScan={handleScan} />
       </View>
     </View>
   );
@@ -119,14 +137,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
-  },
-  center: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    color: "#FFF",
-    fontSize: 16,
   },
   header: {
     backgroundColor: "#4A2B18",

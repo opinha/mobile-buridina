@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const membros = pgTable("membros", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -9,6 +9,7 @@ export const membros = pgTable("membros", {
   nomeSocial: text("nome_social").notNull(),
   endereco: text("endereco"),
   fotoUrl: text("foto_url"),
+  status: text("status").$type<"pending" | "approved" | "rejected">().default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -19,5 +20,6 @@ export const insertMembroSchema = createInsertSchema(membros).omit({
   updatedAt: true,
 });
 
+// @ts-ignore
 export type InsertMembro = z.infer<typeof insertMembroSchema>;
 export type Membro = typeof membros.$inferSelect;

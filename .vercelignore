@@ -1,0 +1,8 @@
+node_modules
+dist
+.expo
+.next
+.vercel
+android
+ios
+artifacts/aldeias-app

@@ -5,11 +5,11 @@ import { Layout } from "./components/Layout";
 
 // Stubs for the pages
 import Home from "./pages/Home";
-import Scanner from "./pages/Scanner";
 import AldeiaDetail from "./pages/AldeiaDetail";
 import MembroDetail from "./pages/MembroDetail";
 import Login from "./pages/Login";
 import CadastroMembro from "./pages/CadastroMembro";
+import CadastroAldeia from "./pages/CadastroAldeia";
 
 const queryClient = new QueryClient();
 
@@ -21,7 +21,7 @@ export default function App() {
           <Switch>
             <Route path="/" component={Login} />
             <Route path="/aldeias" component={Home} />
-            <Route path="/scanner" component={Scanner} />
+            <Route path="/aldeia/cadastrar" component={CadastroAldeia} />
             <Route path="/aldeia/:id/cadastrar" component={CadastroMembro} />
             <Route path="/aldeia/:id" component={AldeiaDetail} />
             <Route path="/membro/:id" component={MembroDetail} />

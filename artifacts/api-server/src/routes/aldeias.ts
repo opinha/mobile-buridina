@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { aldeias, insertAldeiaSchema } from "@workspace/db";
+import { db, aldeias, insertAldeiaSchema } from "@workspace/db";
 import { eq, gt } from "drizzle-orm";
 
 const router = Router();
 
-router.get("/aldeias", async (req, res) => {
+router.get("/aldeias", async (req: any, res: any) => {
   try {
     const updatedAfter = req.query["updatedAfter"] as string | undefined;
     let query = db.select().from(aldeias);
@@ -28,7 +27,7 @@ router.get("/aldeias", async (req, res) => {
   }
 });
 
-router.get("/aldeias/:id", async (req, res) => {
+router.get("/aldeias/:id", async (req: any, res: any) => {
   try {
     const [aldeia] = await db
       .select()
@@ -45,7 +44,7 @@ router.get("/aldeias/:id", async (req, res) => {
   }
 });
 
-router.post("/aldeias", async (req, res) => {
+router.post("/aldeias", async (req: any, res: any) => {
   try {
     const parsed = insertAldeiaSchema.safeParse(req.body);
     if (!parsed.success) {

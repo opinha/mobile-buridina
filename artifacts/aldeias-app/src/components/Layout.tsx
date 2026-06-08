@@ -8,7 +8,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const { currentRoute, navigate } = useApp();
 
-  const showNavbar = currentRoute !== "Login";
+  const showNavbar = true;
 
   return (
     <View style={styles.container}>
@@ -39,8 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               color={
                 currentRoute === "Home" ||
                 currentRoute === "AldeiaDetail" ||
-                currentRoute === "MembroDetail" ||
-                currentRoute === "CadastroMembro"
+                currentRoute === "MembroDetail"
                   ? "#D4691E"
                   : "#8B6347"
               }
@@ -52,8 +51,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   color:
                     currentRoute === "Home" ||
                     currentRoute === "AldeiaDetail" ||
-                    currentRoute === "MembroDetail" ||
-                    currentRoute === "CadastroMembro"
+                    currentRoute === "MembroDetail"
                       ? "#D4691E"
                       : "#8B6347",
                 },
