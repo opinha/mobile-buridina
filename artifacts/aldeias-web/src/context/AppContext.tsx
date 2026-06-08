@@ -350,7 +350,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(userData));
     } catch (err: any) {
-      if (err.message && (err.message.includes("fetch") || err.message.includes("Failed to fetch"))) {
+      console.error("AppContext login error:", err);
+      const errMsg = err?.message || String(err);
+      if (errMsg.toLowerCase().includes("fetch") || errMsg.toLowerCase().includes("network")) {
         throw new Error("Não foi possível conectar ao servidor. O backend está rodando?");
       }
       throw err;

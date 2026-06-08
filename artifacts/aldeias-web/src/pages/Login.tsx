@@ -27,11 +27,10 @@ export default function Login() {
       setLocation("/aldeias");
     } catch (err: any) {
       console.error("Login component error:", err);
-      // Se err for um objeto complexo, tenta pegar uma mensagem string
-      const msg = typeof err === 'string'
-        ? err
-        : (err.message || JSON.stringify(err));
-      setError(msg.includes("[object Object]") ? "Erro de conexão com o servidor." : msg);
+      const msg = err instanceof Error 
+        ? err.message 
+        : (typeof err === 'string' ? err : (err?.message || JSON.stringify(err) || String(err)));
+      setError(msg === "{}" || msg.includes("[object Object]") ? "Erro de conexão com o servidor." : msg);
     } finally {
       setLoading(false);
     }
