@@ -10,7 +10,7 @@
     "app:build": "pnpm --filter @workspace/aldeias-app run build:apk",
     "build": "pnpm run typecheck:libs && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "vercel-build": "pnpm -r --filter \"./artifacts/aldeias-web\" run build && rm -rf public && cp -r artifacts/aldeias-web/dist public"
+    "vercel-build": "pnpm --filter @workspace/api-server run build && pnpm -r --filter \"./artifacts/aldeias-web\" run build && rm -rf public && cp -r artifacts/aldeias-web/dist public"
   },
   "private": true,
   "devDependencies": {
