@@ -7,11 +7,7 @@
     },
     {
       "source": "/((?!api/).*)",
-      "destination": "/artifacts/aldeias-web/dist/$1"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/artifacts/aldeias-web/dist/index.html"
+      "destination": "/index.html"
     }
   ]
 }
