@@ -1,6 +1,7 @@
 {
   "version": 2,
   "outputDirectory": "artifacts/aldeias-web/dist",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -8,11 +9,7 @@
     },
     {
       "source": "/((?!api/).*)",
-      "destination": "/artifacts/aldeias-web/dist/$1"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/artifacts/aldeias-web/dist/index.html"
+      "destination": "/index.html"
     }
   ]
 }
