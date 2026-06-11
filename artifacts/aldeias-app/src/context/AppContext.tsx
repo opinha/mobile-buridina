@@ -269,25 +269,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await processPendingQueue(serverUrl);
       }
 
-      // Then fetch latest database state
+      // Build URLs using lastSyncAt for Delta Sync if available
+      const aldeiasUrl = lastSyncAt
+        ? `${serverUrl}/api/aldeias?updatedAfter=${encodeURIComponent(lastSyncAt)}`
+        : `${serverUrl}/api/aldeias`;
+      
+      const membrosUrl = lastSyncAt
+        ? `${serverUrl}/api/membros?updatedAfter=${encodeURIComponent(lastSyncAt)}`
+        : `${serverUrl}/api/membros`;
+
+      // Then fetch latest database state (full or delta)
       const [aldeiaRes, membroRes] = await Promise.all([
-        fetch(`${serverUrl}/api/aldeias`, { headers: { Accept: "application/json" } }),
-        fetch(`${serverUrl}/api/membros`, { headers: { Accept: "application/json" } }),
+        fetch(aldeiasUrl, { headers: { Accept: "application/json" } }),
+        fetch(membrosUrl, { headers: { Accept: "application/json" } }),
       ]);
 
       if (!aldeiaRes.ok || !membroRes.ok) throw new Error("Fetch failed");
 
-      const aldeiaData: Aldeia[] = await aldeiaRes.json();
-      const membroData: Membro[] = await membroRes.json();
+      const deltaAldeias: Aldeia[] = await aldeiaRes.json();
+      const deltaMembros: Membro[] = await membroRes.json();
 
-      setAldeias(aldeiaData);
-      setMembros(membroData);
+      let finalAldeias = [...aldeias];
+      let finalMembros = [...membros];
+
+      if (!lastSyncAt) {
+        // First sync: take full datasets
+        finalAldeias = deltaAldeias;
+        finalMembros = deltaMembros;
+      } else {
+        // Delta sync: merge updates
+        deltaAldeias.forEach((item) => {
+          const idx = finalAldeias.findIndex((a) => a.id === item.id);
+          if (idx !== -1) {
+            finalAldeias[idx] = item;
+          } else {
+            finalAldeias.push(item);
+          }
+        });
+
+        // Resolve offline temporary members:
+        // Filter out temporary members from current state unless they are still in the pending queue
+        const pendingData = await AsyncStorage.getItem(STORAGE_KEYS.pendingMembros);
+        const pendingQueue: any[] = pendingData ? JSON.parse(pendingData) : [];
+
+        finalMembros = finalMembros.filter((m) => {
+          if (!m.id.startsWith("membro-temp-")) return true;
+          // Only keep temp members that failed to sync and remain in the queue
+          return pendingQueue.some(
+            (pq) =>
+              pq.nomeEtnico === m.nomeEtnico &&
+              pq.nomeSocial === m.nomeSocial &&
+              pq.aldeiaId === m.aldeiaId
+          );
+        });
+
+        // Merge delta updates
+        deltaMembros.forEach((item) => {
+          const idx = finalMembros.findIndex((m) => m.id === item.id);
+          if (idx !== -1) {
+            finalMembros[idx] = item;
+          } else {
+            finalMembros.push(item);
+          }
+        });
+      }
+
+      setAldeias(finalAldeias);
+      setMembros(finalMembros);
 
       const now = new Date().toISOString();
       setLastSyncAt(now);
 
-      await AsyncStorage.setItem(STORAGE_KEYS.aldeias, JSON.stringify(aldeiaData));
-      await AsyncStorage.setItem(STORAGE_KEYS.membros, JSON.stringify(membroData));
+      await AsyncStorage.setItem(STORAGE_KEYS.aldeias, JSON.stringify(finalAldeias));
+      await AsyncStorage.setItem(STORAGE_KEYS.membros, JSON.stringify(finalMembros));
       await AsyncStorage.setItem(STORAGE_KEYS.lastSyncAt, now);
 
       setSyncStatus("idle");
