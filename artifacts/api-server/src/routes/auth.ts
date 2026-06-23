@@ -2,41 +2,55 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { usuarios } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 const router = Router();
 
+let seedingPromise: Promise<void> | null = null;
+
 // Lazy auto-seeding function
 async function ensureDefaultUsers() {
-  try {
-    const existingNew = await db.select().from(usuarios).where(eq(usuarios.username, "master@aldeias.com")).limit(1);
-    if (existingNew.length === 0) {
-      console.log("Seeding default users: master@aldeias.com, admin@aldeias.com, avaliador@aldeias.com...");
-      // Clear old entries if they exist to start clean
-      await db.delete(usuarios);
-      await db.insert(usuarios).values([
-        {
-          username: "master@aldeias.com",
-          password: "teste123",
-          role: "master",
-          nome: "Master Administrator",
-        },
-        {
-          username: "admin@aldeias.com",
-          password: "teste123",
-          role: "admin",
-          nome: "Administrador Regional",
-        },
-        {
-          username: "avaliador@aldeias.com",
-          password: "teste123",
-          role: "avaliador",
-          nome: "Avaliador Principal",
-        },
-      ]);
-    }
-  } catch (err) {
-    console.error("Failed to seed default users:", err);
+  if (seedingPromise) {
+    return seedingPromise;
   }
+  seedingPromise = (async () => {
+    try {
+      const existingNew = await db.select().from(usuarios).where(eq(usuarios.username, "master@aldeias.com")).limit(1);
+      if (existingNew.length === 0) {
+        console.log("Seeding default users: master@aldeias.com, admin@aldeias.com, avaliador@aldeias.com...");
+        // Clear old entries if they exist to start clean
+        await db.delete(usuarios);
+        await db.insert(usuarios).values([
+          {
+            id: crypto.randomUUID(),
+            username: "master@aldeias.com",
+            password: "teste123",
+            role: "master",
+            nome: "Master Administrator",
+          },
+          {
+            id: crypto.randomUUID(),
+            username: "admin@aldeias.com",
+            password: "teste123",
+            role: "admin",
+            nome: "Administrador Regional",
+          },
+          {
+            id: crypto.randomUUID(),
+            username: "avaliador@aldeias.com",
+            password: "teste123",
+            role: "avaliador",
+            nome: "Avaliador Principal",
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to seed default users:", err);
+      // Reset the promise on failure so we can try again on the next request
+      seedingPromise = null;
+    }
+  })();
+  return seedingPromise;
 }
 
 router.post("/login", async (req: any, res: any) => {

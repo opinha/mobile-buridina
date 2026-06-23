@@ -73,6 +73,58 @@ const STORAGE_KEYS = {
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_SERVER_URL = "http://192.168.1.1:3000"; // ALTERE PARA O SEU IP DO IPCONFIG
 
+const MOCK_ALDEIAS: Aldeia[] = [
+  {
+    id: "mock-aldeia-1",
+    nome: "Aldeia Arapó",
+    descricao: "Aldeia tradicional da região norte",
+    localizacao: "Região Norte",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-aldeia-2",
+    nome: "Aldeia Tupà",
+    descricao: "Aldeia dos guardiões da floresta",
+    localizacao: "Região Sul",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+const MOCK_MEMBROS: Membro[] = [
+  {
+    id: "mock-membro-1",
+    aldeiaId: "mock-aldeia-1",
+    nomeEtnico: "Akaié",
+    nomeSocial: "João Silva",
+    endereco: "Rua das Palmeiras, 123",
+    fotoUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-membro-2",
+    aldeiaId: "mock-aldeia-1",
+    nomeEtnico: "Yuari",
+    nomeSocial: "Maria Souza",
+    endereco: "Caminho das Flores, 45",
+    fotoUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-membro-3",
+    aldeiaId: "mock-aldeia-2",
+    nomeEtnico: "Tupinambá",
+    nomeSocial: "Carlos Dias",
+    endereco: "Estrada Real, 89",
+    fotoUrl: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [aldeias, setAldeias] = useState<Aldeia[]>([]);
   const [membros, setMembros] = useState<Membro[]>([]);
@@ -202,12 +254,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const membroData = await AsyncStorage.getItem(STORAGE_KEYS.membros);
       const syncData = await AsyncStorage.getItem(STORAGE_KEYS.lastSyncAt);
 
-      const initialAldeias = aldeiaData ? JSON.parse(aldeiaData) : [];
-      const initialMembros = membroData ? JSON.parse(membroData) : [];
+      const initialAldeias = aldeiaData ? JSON.parse(aldeiaData) : MOCK_ALDEIAS;
+      const initialMembros = membroData ? JSON.parse(membroData) : MOCK_MEMBROS;
 
       setAldeias(initialAldeias);
       setMembros(initialMembros);
-      if (syncData) setLastSyncAt(syncData);
+      if (syncData) {
+        setLastSyncAt(syncData);
+      } else {
+        setLastSyncAt(new Date().toISOString());
+      }
     } catch (e) {
       console.warn("Failed to load local cached data:", e);
     }

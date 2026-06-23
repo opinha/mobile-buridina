@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { membros } from "./membros.js";
+import { membros } from "./membros";
 
 export const votos = pgTable("votos", {
   id: uuid("id").primaryKey().defaultRandom(),
